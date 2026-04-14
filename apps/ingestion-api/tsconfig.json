@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/storage-client"
+    },
+    {
+      "path": "../../packages/ledger"
+    },
+    {
+      "path": "../../packages/signer"
+    },
+    {
+      "path": "../../packages/sdk"
+    }
+  ]
+}

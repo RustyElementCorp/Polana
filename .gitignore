@@ -1,0 +1,7 @@
+target
+tests
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.polana/

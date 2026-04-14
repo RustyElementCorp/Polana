@@ -1,0 +1,16 @@
+[package]
+name = "polana-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base64 = "0.22"
+data-encoding = "2.6"
+ed25519-dalek = { version = "2.1", default-features = false, features = ["pkcs8"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+thiserror = "2.0"
+
+[dev-dependencies]
+serde_json = "1.0"

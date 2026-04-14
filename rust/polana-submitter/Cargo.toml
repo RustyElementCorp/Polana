@@ -1,0 +1,8 @@
+[package]
+name = "polana-submitter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+polana-core = { path = "../polana-core" }
+serde_json = "1.0"

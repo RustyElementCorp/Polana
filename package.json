@@ -1,0 +1,21 @@
+{
+  "name": "polana",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "test": "npm run build && node --test tests/reference-core.test.mjs",
+    "demo:create": "node ./apps/demo-cli/dist/index.js create-demo",
+    "demo:verify": "node ./apps/demo-cli/dist/index.js verify",
+    "api:start": "node ./apps/ingestion-api/dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.2"
+  }
+}

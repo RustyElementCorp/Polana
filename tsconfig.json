@@ -1,0 +1,29 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/memory-schema"
+    },
+    {
+      "path": "./packages/hashing"
+    },
+    {
+      "path": "./packages/storage-client"
+    },
+    {
+      "path": "./packages/ledger"
+    },
+    {
+      "path": "./packages/sdk"
+    },
+    {
+      "path": "./packages/signer"
+    },
+    {
+      "path": "./apps/demo-cli"
+    },
+    {
+      "path": "./apps/ingestion-api"
+    }
+  ]
+}

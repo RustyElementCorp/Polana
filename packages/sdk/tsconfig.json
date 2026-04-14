@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../memory-schema"
+    },
+    {
+      "path": "../hashing"
+    },
+    {
+      "path": "../storage-client"
+    },
+    {
+      "path": "../signer"
+    },
+    {
+      "path": "../ledger"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@polana/memory-schema": [
+        "packages/memory-schema/src/index.ts"
+      ],
+      "@polana/hashing": [
+        "packages/hashing/src/index.ts"
+      ],
+      "@polana/storage-client": [
+        "packages/storage-client/src/index.ts"
+      ],
+      "@polana/ledger": [
+        "packages/ledger/src/index.ts"
+      ],
+      "@polana/signer": [
+        "packages/signer/src/index.ts"
+      ],
+      "@polana/sdk": [
+        "packages/sdk/src/index.ts"
+      ]
+    },
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  }
+}

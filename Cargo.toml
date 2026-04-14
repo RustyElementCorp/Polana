@@ -1,0 +1,3 @@
+[workspace]
+members = ["rust/polana-core", "rust/pallet-memory-registry", "rust/polana-submitter"]
+resolver = "2"

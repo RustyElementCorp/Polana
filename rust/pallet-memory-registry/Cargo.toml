@@ -1,0 +1,29 @@
+[package]
+name = "pallet-memory-registry"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+frame-support = { version = "46.0.0", default-features = false }
+frame-system = { version = "46.0.0", default-features = false }
+parity-scale-codec = { version = "3.7.5", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.6", default-features = false, features = ["derive"] }
+sp-runtime = { version = "46.0.0", default-features = false }
+sp-std = { version = "14.0.0", default-features = false }
+
+[dev-dependencies]
+sp-core = { version = "40.0.0", default-features = false, features = ["std"] }
+sp-io = { version = "45.0.0", default-features = false, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+  "frame-support/std",
+  "frame-system/std",
+  "parity-scale-codec/std",
+  "scale-info/std",
+  "sp-core/std",
+  "sp-io/std",
+  "sp-runtime/std",
+  "sp-std/std"
+]

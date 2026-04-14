@@ -1,0 +1,478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://polana.dev/schemas/memory-object.schema.json",
+  "title": "Polana Memory Object",
+  "description": "Canonical schema for immutable AI memory objects in the Polana lightweight core.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "memory_id",
+    "content",
+    "provenance",
+    "producer",
+    "ownership",
+    "integrity",
+    "timestamps"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.0\\.0$"
+    },
+    "memory_id": {
+      "type": "string",
+      "pattern": "^mem_[a-zA-Z0-9_-]{16,}$",
+      "description": "Protocol-level unique identifier."
+    },
+    "content": {
+      "$ref": "#/$defs/contentDescriptor"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenanceEnvelope"
+    },
+    "producer": {
+      "$ref": "#/$defs/producerDescriptor"
+    },
+    "ownership": {
+      "$ref": "#/$defs/ownershipDescriptor"
+    },
+    "integrity": {
+      "$ref": "#/$defs/integrityDescriptor"
+    },
+    "timestamps": {
+      "$ref": "#/$defs/timestampDescriptor"
+    },
+    "policy": {
+      "$ref": "#/$defs/policyDescriptor"
+    },
+    "attestations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attestationRecord"
+      },
+      "default": []
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/anchorReference"
+      },
+      "default": []
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "maxItems": 32,
+      "default": []
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationReference"
+      },
+      "default": []
+    }
+  },
+  "$defs": {
+    "hashValue": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64,128}$"
+    },
+    "contentDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cid",
+        "media_type",
+        "encoding",
+        "size_bytes"
+      ],
+      "properties": {
+        "cid": {
+          "type": "string",
+          "minLength": 16,
+          "description": "Content-addressed storage identifier."
+        },
+        "media_type": {
+          "type": "string",
+          "examples": [
+            "application/json"
+          ]
+        },
+        "encoding": {
+          "type": "string",
+          "enum": [
+            "json",
+            "jsonl",
+            "cbor",
+            "text",
+            "binary"
+          ]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "encryption": {
+          "$ref": "#/$defs/encryptionDescriptor"
+        },
+        "payload_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "response",
+                "tool_trace",
+                "artifact_bundle",
+                "conversation_turn",
+                "other"
+              ]
+            },
+            "preview": {
+              "type": "string",
+              "maxLength": 280
+            }
+          }
+        }
+      }
+    },
+    "encryptionDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "scheme": {
+          "type": "string"
+        },
+        "key_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "provenanceEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_name",
+        "provider",
+        "output_schema_version"
+      ],
+      "properties": {
+        "model_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt_hash": {
+          "$ref": "#/$defs/hashValue"
+        },
+        "context_hash": {
+          "$ref": "#/$defs/hashValue"
+        },
+        "tool_trace_hash": {
+          "$ref": "#/$defs/hashValue"
+        },
+        "input_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": []
+        },
+        "output_schema_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "agent_runtime_version": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "producerDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_id",
+        "producer_type"
+      ],
+      "properties": {
+        "producer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_type": {
+          "type": "string",
+          "enum": [
+            "agent",
+            "model",
+            "application",
+            "organization",
+            "human"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "key_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "ownershipDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_id",
+        "owner_type"
+      ],
+      "properties": {
+        "owner_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "organization",
+            "application",
+            "shared"
+          ]
+        },
+        "transferable": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "integrityDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_hash",
+        "hash_algorithm"
+      ],
+      "properties": {
+        "canonical_hash": {
+          "$ref": "#/$defs/hashValue"
+        },
+        "hash_algorithm": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "sha3-256",
+            "blake3"
+          ]
+        },
+        "signature": {
+          "$ref": "#/$defs/signatureDescriptor"
+        },
+        "merkle_root": {
+          "$ref": "#/$defs/hashValue"
+        }
+      }
+    },
+    "signatureDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "signer",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "ed25519",
+            "secp256k1",
+            "rsa-pss"
+          ]
+        },
+        "signer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 32
+        }
+      }
+    },
+    "timestampDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source_clock": {
+          "type": "string",
+          "enum": [
+            "app",
+            "ledger",
+            "anchor"
+          ]
+        }
+      }
+    },
+    "policyDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "visibility"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "restricted",
+            "private"
+          ]
+        },
+        "retention": {
+          "type": "string",
+          "enum": [
+            "permanent",
+            "archival",
+            "time_bound"
+          ]
+        },
+        "legal_basis_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "attestationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "issuer",
+        "issued_at"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "producer_signature",
+            "human_review",
+            "enterprise_approval",
+            "execution_proof",
+            "compliance_check"
+          ]
+        },
+        "issuer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        }
+      }
+    },
+    "anchorReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "ref"
+      ],
+      "properties": {
+        "system": {
+          "type": "string",
+          "examples": [
+            "polkadot",
+            "solana",
+            "notary"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "confirmed",
+            "failed"
+          ]
+        }
+      }
+    },
+    "relationReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "target"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "derived_from",
+            "replies_to",
+            "references",
+            "supersedes",
+            "belongs_to_session"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
