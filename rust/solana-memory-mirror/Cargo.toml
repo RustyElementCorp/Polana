@@ -1,0 +1,12 @@
+[package]
+name = "solana-memory-mirror"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+borsh = { version = "1.5.7", features = ["derive"] }
+polana-core = { path = "../polana-core" }
+solana-program = "2.3.0"
+
+[dev-dependencies]
+serde_json = "1.0"

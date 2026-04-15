@@ -1,0 +1,10 @@
+{
+  "rpc_url": "http://127.0.0.1:8899",
+  "program_id": "11111111111111111111111111111111",
+  "authority_keypair_path": "/tmp/authority.json",
+  "authority_pubkey": "11111111111111111111111111111111",
+  "mirror_account_pubkey": "11111111111111111111111111111111",
+  "outbox_path": "/tmp/polana-solana-outbox.jsonl",
+  "recent_blockhash_override": "11111111111111111111111111111111",
+  "submit_rpc": false
+}

@@ -10,7 +10,7 @@ Polana turns those outputs into durable memory objects:
 - the payload hash and provenance metadata are recorded in a verifiable ledger
 - the record can be verified, referenced, permissioned, and reused later
 
-The first version is a lightweight memory kernel. Chain integrations are optional extensions, not the core product.
+The core protocol remains a lightweight memory kernel. The current product direction is a dual-chain architecture built on top of that chain-agnostic core.
 
 ## 2. Product Thesis
 
@@ -25,7 +25,7 @@ Polana should answer four questions for every AI artifact:
 
 - preserve AI outputs and action traces as immutable records
 - attach provenance, ownership, and verification metadata
-- support portable references across applications and optional chains
+- support portable references across applications and multiple chains
 - separate heavy storage from integrity and verification logic
 - make the first MVP narrow enough to ship safely
 
@@ -36,7 +36,7 @@ Polana should answer four questions for every AI artifact:
 - permanent storage of every token, prompt, or private context
 - universal support for every model provider and every chain
 
-## 5. Lightweight Core Architecture
+## 5. Core-First Architecture
 
 ```text
 AI App / Agent
@@ -61,8 +61,8 @@ Memory Object Builder
     |      - policy refs
     |
     +--> Optional Anchor Adapters
-           - Polkadot later
-           - Solana later
+           - Chain A: registry / onboarding
+           - Chain B: access / consumption
            - other registries later
 ```
 
@@ -121,17 +121,17 @@ MVP implementation choices:
 - append-only database table
 - later, one onchain registry when needed
 
-### 6.4 Optional Anchor Adapters
+### 6.4 Chain Adapters
 
 Expose the lightweight core to external chains or registries after the protocol is stable.
 
 Examples:
 
-- Polkadot memory registry
-- Solana consumption mirror
+- Substrate-compatible memory registry
+- second-chain access or consumption mirror
 - enterprise notarization service
 
-These are explicitly optional for the first build.
+The current working assumption is that Polana will operate with at least two chain adapters over time, while keeping the memory core shared.
 
 ## 7. Core Data Model
 
@@ -186,7 +186,7 @@ Examples:
 2. A memory object builder normalizes the payload and metadata.
 3. The full bundle is stored through a storage adapter.
 4. The returned CID or storage key and canonical hash are written to the verification ledger.
-5. Optional anchor adapters publish compact references to external systems.
+5. Chain adapters publish compact references to external systems.
 6. Consumers fetch the bundle from storage and verify the recorded hash and metadata.
 
 ## 9. Canonical Read Flow
@@ -250,7 +250,8 @@ The first version should do only the minimum needed to prove the protocol.
 - searchable tags and filtering
 - ownership transfer
 - policy templates
-- one optional chain anchor
+- first chain anchor
+- second chain adapter after registry semantics stabilize
 
 ### 12.3 Explicitly Deferred
 
@@ -280,8 +281,8 @@ packages/
 adapters/
   storage-local/
   storage-filecoin/
-  anchor-polkadot/
-  anchor-solana/
+  anchor-chain-a/
+  anchor-chain-b/
 
 docs/
   architecture.md
@@ -337,7 +338,8 @@ Output:
 3. Build the append-only verification ledger.
 4. Build local verifier.
 5. Add signatures, policies, and access control.
-6. Add one optional external anchor only when justified.
+6. Add the first chain anchor.
+7. Add the second chain adapter after the registry role is stable.
 
 ## 17. Positioning
 
@@ -346,6 +348,7 @@ Polana is best described as:
 - an AI memory kernel
 - a provenance and attestation layer
 - a portable registry for AI-generated artifacts
+- a dual-chain protocol built on a chain-agnostic core
 
 It should not initially be described as:
 

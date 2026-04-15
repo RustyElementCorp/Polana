@@ -1,0 +1,8 @@
+{
+  "chain_name": "polana-dev",
+  "ws_url": "ws://127.0.0.1:9944",
+  "pallet_name": "MemoryRegistry",
+  "event_name": "MemoryRegistered",
+  "storage_entry_name": "Anchors",
+  "start_block": 1
+}
