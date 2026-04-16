@@ -79,6 +79,7 @@ Responsibilities:
 - schema versioning
 - provenance envelope assembly
 - object ID derivation
+- core-native identity and address rules
 
 Why it exists:
 
@@ -144,13 +145,42 @@ Fields:
 - `memory_id`: protocol-level unique ID
 - `content_cid`: pointer to stored object
 - `content_hash`: canonical hash of serialized payload
-- `producer_id`: agent, model, app, or organization identifier
-- `owner_id`: current owner or controller
+- `producer_id`: core-native producer identifier
+- `owner_id`: core-native owner or controller identifier
 - `created_at`: protocol timestamp
 - `anchor_refs`: optional external anchors
 - `policy_id`: retention / access / visibility policy
 - `attestation_refs`: signatures, proofs, endorsements
 - `tags`: optional app-level categorization
+
+Important distinction:
+
+- Polana core IDs are not the same thing as external chain or wallet addresses
+- external addresses are attached through binding objects
+- identity stays stable even if a subject later adds or replaces external address bindings
+
+### 7.4 Binding Object
+
+The protocol-level unit that connects a core-native subject ID to an external address system.
+
+Fields:
+
+- `binding_id`
+- `subject_id`
+- `subject_type`
+- `external_ref.network`
+- `external_ref.address`
+- `external_ref.scheme`
+- `verification.status`
+- `verification.method`
+- `timestamps`
+
+Binding objects let Polana:
+
+- absorb EVM, Solana, Substrate, DID, or app-local addresses
+- support multiple external addresses for one subject
+- separate identity from derivation scheme
+- version address logic without breaking the core
 
 ### 7.2 Provenance Envelope
 

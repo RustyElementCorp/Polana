@@ -6,7 +6,16 @@ This repo now has the relay code needed for a first local end-to-end run, but it
 - a runnable Solana validator setup
 - a deployed Solana mirror program id
 
-So the current local E2E target is a staged run:
+Before that chain-level staged run, the local core can already be exercised directly:
+
+1. build with `npx tsc -b`
+2. create a memory with `node ./apps/demo-cli/dist/index.js create-demo`
+3. create a binding with `node ./apps/demo-cli/dist/index.js create-binding-demo`
+4. list or export with `list-memories`, `list-bindings`, `export-memory`, `export-binding`
+5. import the exported bundles back with `import-memory` and `import-binding`
+6. run the ingestion API and call `/memories` and `/bindings`
+
+So the current chain-aware E2E target is a staged run:
 
 1. bring up a Substrate-compatible node exposing the `MemoryRegistry` pallet at `ws://127.0.0.1:9944`
 2. register one or more memory anchors on that node
@@ -22,6 +31,46 @@ So the current local E2E target is a staged run:
   [polana-solana-sink.json](/Users/degikwag/code/llm/Polana/examples/polana-solana-sink.json)
 
 ## Commands
+
+### Local Core
+
+Create a memory object:
+
+```bash
+node ./apps/demo-cli/dist/index.js create-demo
+```
+
+Create a binding object:
+
+```bash
+node ./apps/demo-cli/dist/index.js create-binding-demo
+```
+
+List all memories:
+
+```bash
+node ./apps/demo-cli/dist/index.js list-memories
+```
+
+List all bindings:
+
+```bash
+node ./apps/demo-cli/dist/index.js list-bindings
+```
+
+Export the latest memory bundle:
+
+```bash
+node ./apps/demo-cli/dist/index.js export-memory
+```
+
+Export the latest binding bundle:
+
+```bash
+node ./apps/demo-cli/dist/index.js export-binding
+```
+
+### Chain Adapters
 
 Emit a local dev artifact bundle first:
 

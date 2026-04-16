@@ -5,6 +5,7 @@ This document defines the first canonical JSON shape for the Polana lightweight 
 The authoritative machine-readable schema is:
 
 - [memory-object.schema.json](./memory-object.schema.json)
+- [binding-object.schema.json](./binding-object.schema.json)
 
 ## Design Principles
 
@@ -86,9 +87,20 @@ Examples:
 - an organization-controlled runtime
 - a human reviewer in hybrid workflows
 
+Important rule:
+
+- `producer_id` should be a Polana-native ID such as `prod_*`
+- it should not be an EVM address, Solana pubkey, or SS58 address
+- external wallet or chain addresses should be attached through binding objects
+
 ### `ownership`
 
 This is distinct from the producer. A model may produce a memory object while a user or organization owns it.
+
+Important rule:
+
+- `owner_id` should be a Polana-native ID such as `own_*`
+- external account systems belong in binding objects, not as the root owner identifier
 
 ### `integrity`
 
@@ -145,12 +157,12 @@ If omitted in MVP, the ingestion layer should apply a default policy outside the
     "agent_runtime_version": "codex-desktop-1.2.0"
   },
   "producer": {
-    "producer_id": "agent:polana-demo",
+    "producer_id": "prod_01jq9x8p0nz6y2d8w0b2t7r4kb",
     "producer_type": "agent",
     "display_name": "Polana Demo Agent"
   },
   "ownership": {
-    "owner_id": "org:polana-labs",
+    "owner_id": "own_01jq9x8p0nz6y2d8w0b2t7r4kc",
     "owner_type": "organization",
     "transferable": false
   },
@@ -199,3 +211,5 @@ After this schema, the next artifact should be a short canonicalization spec suc
 That spec now lives here:
 
 - [Canonicalization Spec](./canonicalization.md)
+- [Address Model](./address-model.md)
+- [Versioning Policy](./versioning-policy.md)

@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 export type HashAlgorithm = "sha256" | "sha3-256" | "blake3";
 export type ProducerType =
   | "agent"
@@ -9,6 +11,8 @@ export type OwnerType = "user" | "organization" | "application" | "shared";
 export type Visibility = "public" | "restricted" | "private";
 export type Retention = "permanent" | "archival" | "time_bound";
 export type SourceClock = "app" | "ledger" | "anchor";
+export type BindingSubjectType = "producer" | "owner" | "attestation" | "anchor";
+export type BindingVerificationStatus = "claimed" | "verified" | "revoked";
 
 export interface EncryptionDescriptor {
   enabled: boolean;
@@ -107,6 +111,36 @@ export interface RelationReference {
   target: string;
 }
 
+export interface ExternalAddressReference {
+  network: string;
+  address: string;
+  scheme: string;
+}
+
+export interface BindingVerificationDescriptor {
+  status: BindingVerificationStatus;
+  method: string;
+  evidence_ref?: string;
+  verified_by?: string;
+}
+
+export interface BindingTimestamps {
+  created_at: string;
+  verified_at?: string;
+  revoked_at?: string;
+}
+
+export interface BindingObject {
+  schema_version: "1.0.0";
+  binding_id: string;
+  subject_id: string;
+  subject_type: BindingSubjectType;
+  external_ref: ExternalAddressReference;
+  verification: BindingVerificationDescriptor;
+  timestamps: BindingTimestamps;
+  notes?: string;
+}
+
 export interface MemoryObject {
   schema_version: "1.0.0";
   memory_id: string;
@@ -124,6 +158,12 @@ export interface MemoryObject {
 }
 
 export const MEMORY_SCHEMA_VERSION = "1.0.0";
+export const CORE_ID_BODY_PATTERN = /^[a-z0-9]{20,64}$/;
+export const PRODUCER_ID_PATTERN = /^prod_[a-z0-9]{20,64}$/;
+export const OWNER_ID_PATTERN = /^own_[a-z0-9]{20,64}$/;
+export const BINDING_ID_PATTERN = /^bind_[a-z0-9]{20,64}$/;
+export const ATTESTATION_ID_PATTERN = /^att_[a-z0-9]{20,64}$/;
+export const ANCHOR_ID_PATTERN = /^anch_[a-z0-9]{20,64}$/;
 
 const HASH_PATTERN = /^[a-f0-9]{64,128}$/;
 const MEMORY_ID_PATTERN = /^mem_[a-z0-9_-]{16,}$/;
@@ -142,6 +182,191 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function toBase32LowerNoPadding(bytes: Uint8Array): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz234567";
+  let bits = 0;
+  let value = 0;
+  let output = "";
+
+  for (const byte of bytes) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      output += alphabet[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    output += alphabet[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+}
+
+export function isProducerId(value: string): boolean {
+  return PRODUCER_ID_PATTERN.test(value);
+}
+
+export function isOwnerId(value: string): boolean {
+  return OWNER_ID_PATTERN.test(value);
+}
+
+export function isBindingId(value: string): boolean {
+  return BINDING_ID_PATTERN.test(value);
+}
+
+export function isAttestationId(value: string): boolean {
+  return ATTESTATION_ID_PATTERN.test(value);
+}
+
+export function isAnchorId(value: string): boolean {
+  return ANCHOR_ID_PATTERN.test(value);
+}
+
+export function validateProducerId(value: string): void {
+  assert(isProducerId(value), "producer_id must match ^prod_[a-z0-9]{20,64}$");
+}
+
+export function validateOwnerId(value: string): void {
+  assert(isOwnerId(value), "owner_id must match ^own_[a-z0-9]{20,64}$");
+}
+
+export function validateBindingId(value: string): void {
+  assert(isBindingId(value), "binding_id must match ^bind_[a-z0-9]{20,64}$");
+}
+
+export function validateAttestationId(value: string): void {
+  assert(isAttestationId(value), "attestation_id must match ^att_[a-z0-9]{20,64}$");
+}
+
+export function validateAnchorId(value: string): void {
+  assert(isAnchorId(value), "anchor_id must match ^anch_[a-z0-9]{20,64}$");
+}
+
+function validateBindingSubjectId(value: string): void {
+  assert(
+    isProducerId(value)
+      || isOwnerId(value)
+      || isAttestationId(value)
+      || isAnchorId(value),
+    "binding.subject_id must match ^(prod|own|att|anch)_[a-z0-9]{20,64}$",
+  );
+}
+
+export function createCoreIdFromBytes(
+  prefix: "prod" | "own" | "bind" | "att" | "anch",
+  bytes: Uint8Array,
+): string {
+  assert(bytes.byteLength >= 16, "core id generation requires at least 16 bytes");
+  const body = toBase32LowerNoPadding(bytes);
+  assert(CORE_ID_BODY_PATTERN.test(body), "generated core id body is invalid");
+  return `${prefix}_${body}`;
+}
+
+export function generateProducerId(): string {
+  return createCoreIdFromBytes("prod", randomBytes(16));
+}
+
+export function generateOwnerId(): string {
+  return createCoreIdFromBytes("own", randomBytes(16));
+}
+
+export function generateBindingId(): string {
+  return createCoreIdFromBytes("bind", randomBytes(16));
+}
+
+export function generateAttestationId(): string {
+  return createCoreIdFromBytes("att", randomBytes(16));
+}
+
+export function generateAnchorId(): string {
+  return createCoreIdFromBytes("anch", randomBytes(16));
+}
+
+export function assertValidBindingObject(value: unknown): asserts value is BindingObject {
+  assert(isRecord(value), "binding object must be an object");
+  assert(value.schema_version === MEMORY_SCHEMA_VERSION, "binding.schema_version must be 1.0.0");
+  assert(typeof value.binding_id === "string", "binding.binding_id is required");
+  validateBindingId(value.binding_id);
+  assert(typeof value.subject_id === "string", "binding.subject_id is required");
+  validateBindingSubjectId(value.subject_id);
+  assert(
+    ["producer", "owner", "attestation", "anchor"].includes(String(value.subject_type)),
+    "binding.subject_type is invalid",
+  );
+
+  assert(isRecord(value.external_ref), "binding.external_ref is required");
+  assert(
+    typeof value.external_ref.network === "string" && value.external_ref.network.trim().length > 0,
+    "binding.external_ref.network is required",
+  );
+  assert(
+    typeof value.external_ref.address === "string" && value.external_ref.address.trim().length > 0,
+    "binding.external_ref.address is required",
+  );
+  assert(
+    typeof value.external_ref.scheme === "string" && value.external_ref.scheme.trim().length > 0,
+    "binding.external_ref.scheme is required",
+  );
+
+  assert(isRecord(value.verification), "binding.verification is required");
+  assert(
+    ["claimed", "verified", "revoked"].includes(String(value.verification.status)),
+    "binding.verification.status is invalid",
+  );
+  assert(
+    typeof value.verification.method === "string" && value.verification.method.trim().length > 0,
+    "binding.verification.method is required",
+  );
+
+  assert(isRecord(value.timestamps), "binding.timestamps is required");
+  assertTimestamp("binding.timestamps.created_at", value.timestamps.created_at, true);
+  assertTimestamp("binding.timestamps.verified_at", value.timestamps.verified_at);
+  assertTimestamp("binding.timestamps.revoked_at", value.timestamps.revoked_at);
+  assertValidBindingLifecycle(value as unknown as BindingObject);
+}
+
+export function assertValidBindingLifecycle(binding: BindingObject): void {
+  const status = binding.verification.status;
+  const verifiedAt = binding.timestamps.verified_at;
+  const revokedAt = binding.timestamps.revoked_at;
+
+  if (status === "claimed") {
+    assert(verifiedAt === undefined, "claimed binding must not include timestamps.verified_at");
+    assert(revokedAt === undefined, "claimed binding must not include timestamps.revoked_at");
+    return;
+  }
+
+  if (status === "verified") {
+    assert(verifiedAt !== undefined, "verified binding must include timestamps.verified_at");
+    assert(revokedAt === undefined, "verified binding must not include timestamps.revoked_at");
+    return;
+  }
+
+  if (status === "revoked") {
+    assert(revokedAt !== undefined, "revoked binding must include timestamps.revoked_at");
+  }
+}
+
+export function assertValidBindingTransition(
+  previousStatus: BindingVerificationStatus,
+  nextBinding: BindingObject,
+): void {
+  assertValidBindingObject(nextBinding);
+  const nextStatus = nextBinding.verification.status;
+
+  const allowed =
+    previousStatus === nextStatus
+    || (previousStatus === "claimed" && (nextStatus === "verified" || nextStatus === "revoked"))
+    || (previousStatus === "verified" && nextStatus === "revoked");
+
+  assert(
+    allowed,
+    `binding transition ${previousStatus} -> ${nextStatus} is invalid`,
+  );
 }
 
 function assertHash(name: string, value: unknown, required = false): void {
@@ -184,10 +409,12 @@ export function assertValidMemoryObject(value: unknown): asserts value is Memory
 
   assert(isRecord(value.producer), "producer is required");
   assert(typeof value.producer.producer_id === "string" && value.producer.producer_id.length > 0, "producer.producer_id is required");
+  validateProducerId(value.producer.producer_id);
   assert(["agent", "model", "application", "organization", "human"].includes(String(value.producer.producer_type)), "producer.producer_type is invalid");
 
   assert(isRecord(value.ownership), "ownership is required");
   assert(typeof value.ownership.owner_id === "string" && value.ownership.owner_id.length > 0, "ownership.owner_id is required");
+  validateOwnerId(value.ownership.owner_id);
   assert(["user", "organization", "application", "shared"].includes(String(value.ownership.owner_type)), "ownership.owner_type is invalid");
 
   assert(isRecord(value.integrity), "integrity is required");

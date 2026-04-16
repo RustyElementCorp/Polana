@@ -42,7 +42,7 @@ Polana is currently being shaped as:
 
 This means the current Substrate work is intentional, but it is not the whole product.
 
-## Demo
+## Local Core
 
 Build everything:
 
@@ -68,11 +68,63 @@ Start the local ingestion API:
 node ./apps/ingestion-api/dist/index.js
 ```
 
+Create a demo binding object:
+
+```bash
+node ./apps/demo-cli/dist/index.js create-binding-demo
+```
+
+List recorded memories:
+
+```bash
+node ./apps/demo-cli/dist/index.js list-memories
+```
+
+List recorded bindings:
+
+```bash
+node ./apps/demo-cli/dist/index.js list-bindings
+```
+
+Export the most recent memory bundle:
+
+```bash
+node ./apps/demo-cli/dist/index.js export-memory
+```
+
+Export the most recent binding bundle:
+
+```bash
+node ./apps/demo-cli/dist/index.js export-binding
+```
+
+Import a memory bundle from disk:
+
+```bash
+node ./apps/demo-cli/dist/index.js import-memory /tmp/polana-memory-bundle.json
+```
+
+Import a binding bundle from disk:
+
+```bash
+node ./apps/demo-cli/dist/index.js import-binding /tmp/polana-binding-bundle.json
+```
+
 Run the reference-core test suite:
 
 ```bash
 npm test
 ```
+
+The local core now supports these flows for both memory objects and binding objects:
+
+- create
+- record
+- query
+- export
+- import
+
+## Chain Adapters
 
 Run the local relayer preview:
 
@@ -113,6 +165,47 @@ cargo run -p polana-node -- describe-service-plan
 The Solana sink can now build transaction previews and persist them to a JSONL outbox via `SolanaRpcMirrorSinkConfig.outbox_path`.
 It can also build signed transaction previews offline with `recent_blockhash_override`, and optionally submit `sendTransaction` requests when `submit_rpc` is enabled.
 
+## Local API
+
+With the ingestion API running, the main HTTP routes are:
+
+- `GET /health`
+- `POST /memories`
+- `GET /memories`
+- `GET /memories/:id`
+- `GET /memories/:id/verify`
+- `GET /memories/:id/export`
+- `POST /memories/import`
+- `POST /bindings`
+- `GET /bindings`
+- `GET /bindings/:id`
+- `GET /bindings/:id/export`
+- `POST /bindings/import`
+
+Examples:
+
+```bash
+curl -s http://127.0.0.1:8787/memories
+```
+
+```bash
+curl -s http://127.0.0.1:8787/bindings
+```
+
+Error responses use a common shape:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "request body is empty"
+  }
+}
+```
+
+Exported bundles now include an explicit `bundle_version` field and import paths reject unsupported bundle versions.
+
 ## Core Idea
 
 An AI response should not disappear after generation. It should become a memory object with:
@@ -124,10 +217,17 @@ An AI response should not disappear after generation. It should become a memory 
 
 This is the first step toward treating AI footprints as persistent, attributable, and eventually institution-like digital entities.
 
+Polana core identity is intentionally separate from external chain addresses.
+`memory_id`, `producer_id`, and `owner_id` are core-native IDs; Solana, EVM, Substrate, DID, and other address formats are attached through binding objects.
+
 ## Design Docs
 
 - [Architecture](./docs/architecture.md)
 - [Memory Object Schema](./docs/schema.md)
+- [Address Model](./docs/address-model.md)
+- [ID Generation](./docs/id-generation.md)
+- [Core Checklist](./docs/core-checklist.md)
+- [Versioning Policy](./docs/versioning-policy.md)
 - [Canonicalization Spec](./docs/canonicalization.md)
 - [Storage Adapter Interface](./docs/storage-adapters.md)
 - [Dual-Chain Strategy](./docs/dual-chain-strategy.md)

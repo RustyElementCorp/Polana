@@ -21,6 +21,10 @@ It does not yet define:
 - partial disclosure proofs
 - zk-friendly encodings
 
+Related version policy:
+
+- [Versioning Policy](./versioning-policy.md)
+
 ## 2. Canonical Serialization Format
 
 The canonical serialization format for `v1.0.0` is:

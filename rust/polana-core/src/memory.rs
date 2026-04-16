@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::PolanaCoreError;
+use crate::{PolanaCoreError, validate_owner_id, validate_producer_id};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureDescriptor {
@@ -149,9 +149,7 @@ fn validate_provenance(provenance: &Value) -> Result<(), PolanaCoreError> {
 
 fn validate_producer(producer: &Value) -> Result<(), PolanaCoreError> {
     let producer_id = get_required_string(producer, "producer_id", "producer.producer_id")?;
-    if producer_id.trim().is_empty() {
-        return Err(PolanaCoreError::MissingField("producer.producer_id"));
-    }
+    validate_producer_id(producer_id)?;
 
     let producer_type = get_required_string(producer, "producer_type", "producer.producer_type")?;
     if !matches!(
@@ -166,9 +164,7 @@ fn validate_producer(producer: &Value) -> Result<(), PolanaCoreError> {
 
 fn validate_ownership(ownership: &Value) -> Result<(), PolanaCoreError> {
     let owner_id = get_required_string(ownership, "owner_id", "ownership.owner_id")?;
-    if owner_id.trim().is_empty() {
-        return Err(PolanaCoreError::MissingField("ownership.owner_id"));
-    }
+    validate_owner_id(owner_id)?;
 
     let owner_type = get_required_string(ownership, "owner_type", "ownership.owner_type")?;
     if !matches!(owner_type, "user" | "organization" | "application" | "shared") {

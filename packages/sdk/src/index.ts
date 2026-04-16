@@ -1,8 +1,13 @@
 import {
+  type BindingObject,
   type MemoryObject,
   type ContentDescriptor,
   MEMORY_SCHEMA_VERSION,
+  assertValidBindingObject,
   assertValidMemoryObject,
+  generateBindingId,
+  generateOwnerId,
+  generateProducerId,
 } from "@polana/memory-schema";
 import {
   createMemoryObjectWithDerivedIdentity,
@@ -10,7 +15,14 @@ import {
   serializeCanonicalJson,
   toCanonicalHashInput,
 } from "@polana/hashing";
-import type { LedgerClient, LedgerEntry, LedgerRecord } from "@polana/ledger";
+import type {
+  BindingLedgerClient,
+  BindingLedgerEntry,
+  BindingLedgerRecord,
+  LedgerClient,
+  LedgerEntry,
+  LedgerRecord,
+} from "@polana/ledger";
 import {
   signPayloadEd25519,
   verifyPayloadEd25519,
@@ -35,10 +47,39 @@ export class PolanaError extends Error {
   constructor(
     public readonly code: PolanaErrorCode,
     message: string,
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "PolanaError";
   }
+}
+
+export interface NormalizedPolanaError {
+  code: PolanaErrorCode;
+  message: string;
+  details?: unknown;
+}
+
+export function normalizePolanaError(error: unknown): NormalizedPolanaError {
+  if (error instanceof PolanaError) {
+    return {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      code: POLANA_ERROR_CODES.INVALID_INPUT,
+      message: error.message,
+    };
+  }
+
+  return {
+    code: POLANA_ERROR_CODES.INVALID_INPUT,
+    message: "unknown error",
+  };
 }
 
 export interface ProducerSignerInput {
@@ -48,10 +89,16 @@ export interface ProducerSignerInput {
   signer?: string;
 }
 
-export interface CreateMemoryInput extends Omit<MemoryObject, "schema_version" | "memory_id" | "content" | "integrity"> {
+export interface CreateMemoryInput extends Omit<MemoryObject, "schema_version" | "memory_id" | "content" | "integrity" | "producer" | "ownership"> {
   content_body: string;
   content_media_type?: string;
   content_encoding?: ContentDescriptor["encoding"];
+  producer: Omit<MemoryObject["producer"], "producer_id"> & {
+    producer_id?: string;
+  };
+  ownership: Omit<MemoryObject["ownership"], "owner_id"> & {
+    owner_id?: string;
+  };
   signer?: ProducerSignerInput;
 }
 
@@ -60,6 +107,105 @@ export interface VerificationResult {
   code?: PolanaErrorCode;
   reason?: string;
   record?: LedgerRecord;
+}
+
+export interface MemoryQuery {
+  memory_id?: string;
+  producer_id?: string;
+  owner_id?: string;
+  policy_id?: string;
+  tag?: string;
+}
+
+export const POLANA_BUNDLE_VERSION = "1.0.0";
+
+export interface ExportedMemoryBundle {
+  bundle_version: typeof POLANA_BUNDLE_VERSION;
+  record: LedgerRecord;
+  content_body: string;
+}
+
+export interface CreateBindingInput extends Omit<BindingObject, "schema_version" | "binding_id"> {
+  binding_id?: string;
+}
+
+export interface StoredBindingEntry {
+  binding_id: string;
+  content_cid: string;
+  recorded_at?: string;
+  subject_id: string;
+  subject_type: BindingObject["subject_type"];
+  verification_status: BindingObject["verification"]["status"];
+}
+
+export interface BindingQuery {
+  binding_id?: string;
+  subject_id?: string;
+  subject_type?: BindingObject["subject_type"];
+  verification_status?: BindingObject["verification"]["status"];
+  network?: string;
+  scheme?: string;
+}
+
+export interface ExportedBindingBundle {
+  bundle_version: typeof POLANA_BUNDLE_VERSION;
+  record: BindingLedgerRecord;
+  binding_body: string;
+}
+
+export function createBindingObject(input: CreateBindingInput): BindingObject {
+  const binding: BindingObject = {
+    schema_version: MEMORY_SCHEMA_VERSION,
+    binding_id: input.binding_id ?? generateBindingId(),
+    subject_id: input.subject_id,
+    subject_type: input.subject_type,
+    external_ref: input.external_ref,
+    verification: input.verification,
+    timestamps: input.timestamps,
+    notes: input.notes,
+  };
+
+  assertValidBindingObject(binding);
+  return binding;
+}
+
+export async function createAndStoreBindingObject(
+  input: CreateBindingInput,
+  storage: StorageClient,
+): Promise<StoredBindingEntry> {
+  const binding = createBindingObject(input);
+  const raw = JSON.stringify(binding, null, 2);
+  const stored = await storage.put(raw);
+  return {
+    binding_id: binding.binding_id,
+    content_cid: stored.cid,
+    subject_id: binding.subject_id,
+    subject_type: binding.subject_type,
+    verification_status: binding.verification.status,
+  };
+}
+
+export async function createAndRecordBindingObject(
+  input: CreateBindingInput,
+  storage: StorageClient,
+  ledger: BindingLedgerClient,
+): Promise<BindingLedgerEntry> {
+  const binding = createBindingObject(input);
+  const raw = JSON.stringify(binding, null, 2);
+  const stored = await storage.put(raw);
+  const recordedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+
+  const entry: BindingLedgerEntry = {
+    binding_id: binding.binding_id,
+    content_cid: stored.cid,
+    recorded_at: recordedAt,
+    subject_id: binding.subject_id,
+    subject_type: binding.subject_type,
+    verification_status: binding.verification.status,
+  };
+
+  await ledger.append({ entry, binding });
+  return entry;
 }
 
 export async function createAndRecordMemoryObject(
@@ -82,9 +228,13 @@ export async function createAndRecordMemoryObject(
     provenance: input.provenance,
     producer: {
       ...input.producer,
+      producer_id: input.producer.producer_id ?? generateProducerId(),
       key_ref: input.producer.key_ref ?? input.signer?.public_key_pem,
     },
-    ownership: input.ownership,
+    ownership: {
+      ...input.ownership,
+      owner_id: input.ownership.owner_id ?? generateOwnerId(),
+    },
     timestamps: {
       ...input.timestamps,
       recorded_at: input.timestamps.recorded_at ?? now,
@@ -213,4 +363,188 @@ export async function getRecordedMemoryObject(
   ledger: LedgerClient,
 ): Promise<LedgerRecord | null> {
   return ledger.get(memoryId);
+}
+
+export async function listRecordedMemoryObjects(
+  ledger: LedgerClient,
+  query: MemoryQuery = {},
+): Promise<LedgerRecord[]> {
+  const records = await ledger.list();
+  return records.filter((record) => {
+    if (query.memory_id && record.entry.memory_id !== query.memory_id) {
+      return false;
+    }
+    if (query.producer_id && record.memory.producer.producer_id !== query.producer_id) {
+      return false;
+    }
+    if (query.owner_id && record.memory.ownership.owner_id !== query.owner_id) {
+      return false;
+    }
+    if (query.policy_id && record.memory.policy?.policy_id !== query.policy_id) {
+      return false;
+    }
+    if (query.tag && !record.memory.tags?.includes(query.tag)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export async function exportRecordedMemoryObject(
+  memoryId: string,
+  storage: StorageClient,
+  ledger: LedgerClient,
+): Promise<ExportedMemoryBundle> {
+  const record = await ledger.get(memoryId);
+  if (!record) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.LEDGER_RECORD_NOT_FOUND,
+      "ledger record not found",
+    );
+  }
+
+  const bytes = await storage.get(record.entry.content_cid);
+  return {
+    bundle_version: POLANA_BUNDLE_VERSION,
+    record,
+    content_body: new TextDecoder().decode(bytes),
+  };
+}
+
+export async function getRecordedBindingObject(
+  bindingId: string,
+  ledger: BindingLedgerClient,
+): Promise<BindingLedgerRecord | null> {
+  return ledger.get(bindingId);
+}
+
+export async function listRecordedBindingObjects(
+  ledger: BindingLedgerClient,
+  query: BindingQuery = {},
+): Promise<BindingLedgerRecord[]> {
+  const records = await ledger.list();
+  return records.filter((record) => {
+    if (query.binding_id && record.entry.binding_id !== query.binding_id) {
+      return false;
+    }
+    if (query.subject_id && record.binding.subject_id !== query.subject_id) {
+      return false;
+    }
+    if (query.subject_type && record.binding.subject_type !== query.subject_type) {
+      return false;
+    }
+    if (
+      query.verification_status &&
+      record.binding.verification.status !== query.verification_status
+    ) {
+      return false;
+    }
+    if (query.network && record.binding.external_ref.network !== query.network) {
+      return false;
+    }
+    if (query.scheme && record.binding.external_ref.scheme !== query.scheme) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export async function exportRecordedBindingObject(
+  bindingId: string,
+  storage: StorageClient,
+  ledger: BindingLedgerClient,
+): Promise<ExportedBindingBundle> {
+  const record = await ledger.get(bindingId);
+  if (!record) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.LEDGER_RECORD_NOT_FOUND,
+      "binding ledger record not found",
+    );
+  }
+
+  const bytes = await storage.get(record.entry.content_cid);
+  return {
+    bundle_version: POLANA_BUNDLE_VERSION,
+    record,
+    binding_body: new TextDecoder().decode(bytes),
+  };
+}
+
+export async function importRecordedBindingBundle(
+  bundle: ExportedBindingBundle,
+  storage: StorageClient,
+  ledger: BindingLedgerClient,
+): Promise<BindingLedgerEntry> {
+  if (bundle.bundle_version !== POLANA_BUNDLE_VERSION) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.INVALID_INPUT,
+      "unsupported binding bundle version",
+      { expected: POLANA_BUNDLE_VERSION, actual: bundle.bundle_version },
+    );
+  }
+
+  assertValidBindingObject(bundle.record.binding);
+
+  const stored = await storage.put(bundle.binding_body);
+  if (stored.cid !== bundle.record.entry.content_cid) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.CONTENT_CID_MISMATCH,
+      "imported binding content cid does not match binding ledger cid",
+    );
+  }
+
+  const existing = await ledger.get(bundle.record.entry.binding_id);
+  if (existing) {
+    return existing.entry;
+  }
+
+  await ledger.append(bundle.record);
+  return bundle.record.entry;
+}
+
+export async function importRecordedMemoryBundle(
+  bundle: ExportedMemoryBundle,
+  storage: StorageClient,
+  ledger: LedgerClient,
+): Promise<LedgerEntry> {
+  if (bundle.bundle_version !== POLANA_BUNDLE_VERSION) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.INVALID_INPUT,
+      "unsupported memory bundle version",
+      { expected: POLANA_BUNDLE_VERSION, actual: bundle.bundle_version },
+    );
+  }
+
+  assertValidMemoryObject(bundle.record.memory);
+
+  if (bundle.record.entry.canonical_hash !== bundle.record.memory.integrity.canonical_hash) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.LEDGER_HASH_MISMATCH,
+      "ledger hash does not match memory integrity hash",
+    );
+  }
+
+  const recomputedHash = hashCanonicalMemoryObject(bundle.record.memory);
+  if (recomputedHash !== bundle.record.memory.integrity.canonical_hash) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.CANONICAL_HASH_MISMATCH,
+      "recomputed canonical hash mismatch",
+    );
+  }
+
+  const stored = await storage.put(bundle.content_body);
+  if (stored.cid !== bundle.record.memory.content.cid) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.CONTENT_CID_MISMATCH,
+      "imported content cid does not match memory content cid",
+    );
+  }
+
+  const existing = await ledger.get(bundle.record.entry.memory_id);
+  if (existing) {
+    return existing.entry;
+  }
+
+  await ledger.append(bundle.record);
+  return bundle.record.entry;
 }
