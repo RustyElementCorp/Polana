@@ -6,6 +6,7 @@ The authoritative machine-readable schema is:
 
 - [memory-object.schema.json](./memory-object.schema.json)
 - [binding-object.schema.json](./binding-object.schema.json)
+- [attestation-object.schema.json](./attestation-object.schema.json)
 
 ## Design Principles
 
@@ -27,6 +28,11 @@ The memory object is organized into a few stable sections:
 - `timestamps`: creation and recording times
 - `policy`: visibility and retention rules
 - `attestations`, `anchors`, `relations`, `tags`: optional extensions
+
+Separate core objects also exist for:
+
+- bindings
+- attestations
 
 ## Required Fields
 
@@ -213,3 +219,39 @@ That spec now lives here:
 - [Canonicalization Spec](./canonicalization.md)
 - [Address Model](./address-model.md)
 - [Versioning Policy](./versioning-policy.md)
+
+## Attestation Object
+
+The attestation object is the core unit for explicit review, approval, proof, or compliance claims around another protocol subject.
+
+Required fields in `v1.0.0`:
+
+- `schema_version`
+- `attestation_id`
+- `subject_id`
+- `subject_type`
+- `kind`
+- `issuer`
+- `evidence`
+- `status`
+- `timestamps`
+
+The first subject types are:
+
+- `memory`
+- `binding`
+- `producer`
+- `owner`
+- `attestation`
+- `anchor`
+
+The first lifecycle is intentionally narrow:
+
+- `issued`
+- `revoked`
+
+Recommended interpretation:
+
+- attestation objects are separate protocol artifacts, not just inline notes on a memory
+- `memory.attestations` may still carry lightweight references or summaries
+- the full attestation object is where lifecycle, issuer identity, and evidence semantics live

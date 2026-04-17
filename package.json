@@ -8,11 +8,15 @@
   ],
   "scripts": {
     "build": "tsc -b",
+    "core:build": "tsc -b tsconfig.core.json",
     "typecheck": "tsc -b --pretty false",
+    "core:test": "npm run core:build && node --test tests/reference-core.test.mjs",
+    "core:test:all": "npm run core:test && cargo test -p polana-core",
     "test": "npm run build && node --test tests/reference-core.test.mjs",
     "demo:create": "node ./apps/demo-cli/dist/index.js create-demo",
     "demo:verify": "node ./apps/demo-cli/dist/index.js verify",
-    "api:start": "node ./apps/ingestion-api/dist/index.js"
+    "api:start": "node ./apps/ingestion-api/dist/index.js",
+    "client:start": "node ./apps/core-client/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    PolanaCoreError, create_core_id_from_bytes, validate_binding_id, validate_owner_id,
-    validate_producer_id,
+    PolanaCoreError, create_core_id_from_bytes, validate_anchor_id, validate_attestation_id,
+    validate_binding_id, validate_owner_id, validate_producer_id,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -190,19 +190,12 @@ fn validate_binding_subject_id(value: &str) -> Result<(), PolanaCoreError> {
     if value.starts_with("own_") {
         return validate_owner_id(value);
     }
-    if value.starts_with("att_") || value.starts_with("anch_") {
-        let prefix = if value.starts_with("att_") { "att_" } else { "anch_" };
-        let body = &value[prefix.len()..];
-        if body.len() < 20 || body.len() > 64 {
-            return Err(PolanaCoreError::InvalidField("binding.subject_id"));
-        }
-        if !body
-            .chars()
-            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit())
-        {
-            return Err(PolanaCoreError::InvalidField("binding.subject_id"));
-        }
-        return Ok(());
+    if value.starts_with("att_") {
+        return validate_attestation_id(value)
+            .map_err(|_| PolanaCoreError::InvalidField("binding.subject_id"));
+    }
+    if value.starts_with("anch_") {
+        return validate_anchor_id(value).map_err(|_| PolanaCoreError::InvalidField("binding.subject_id"));
     }
 
     Err(PolanaCoreError::InvalidField("binding.subject_id"))

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{PolanaCoreError, validate_owner_id, validate_producer_id};
+use crate::{PolanaCoreError, validate_memory_id, validate_owner_id, validate_producer_id};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignatureDescriptor {
@@ -40,9 +40,7 @@ impl MemoryObject {
             return Err(PolanaCoreError::InvalidField("schema_version"));
         }
 
-        if !self.memory_id.starts_with("mem_") || self.memory_id.len() < 20 {
-            return Err(PolanaCoreError::InvalidField("memory_id"));
-        }
+        validate_memory_id(&self.memory_id).map_err(|_| PolanaCoreError::InvalidField("memory_id"))?;
 
         validate_content(&self.content)?;
         validate_provenance(&self.provenance)?;

@@ -14,6 +14,7 @@ import {
   importRecordedMemoryBundle,
   listRecordedBindingObjects,
   listRecordedMemoryObjects,
+  normalizePolanaError,
   verifyRecordedMemoryObject,
 } from "@polana/sdk";
 import { LocalStorageClient } from "@polana/storage-client";
@@ -32,6 +33,33 @@ function getClients() {
     ledger: new JsonlLedgerClient(ledgerPath),
     bindingLedger: new JsonlBindingLedgerClient(bindingLedgerPath),
   };
+}
+
+function printSuccess(command: string, data: unknown): void {
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        command,
+        data,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+function printError(error: unknown): void {
+  console.error(
+    JSON.stringify(
+      {
+        ok: false,
+        error: normalizePolanaError(error),
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 async function persistLastMemoryId(memoryId: string): Promise<void> {
@@ -105,7 +133,7 @@ async function createDemo(): Promise<void> {
   );
 
   await persistLastMemoryId(entry.memory_id);
-  console.log(JSON.stringify(entry, null, 2));
+  printSuccess("create-demo", entry);
 }
 
 async function createBindingDemo(): Promise<void> {
@@ -133,20 +161,20 @@ async function createBindingDemo(): Promise<void> {
   );
 
   await persistLastBindingId(entry.binding_id);
-  console.log(JSON.stringify(entry, null, 2));
+  printSuccess("create-binding-demo", entry);
 }
 
 async function verify(memoryId?: string): Promise<void> {
   const { storage, ledger } = getClients();
   const effectiveMemoryId = memoryId ?? (await readFile(lastIdPath, "utf8")).trim();
   const result = await verifyRecordedMemoryObject(effectiveMemoryId, storage, ledger);
-  console.log(JSON.stringify(result, null, 2));
+  printSuccess("verify", result);
   process.exitCode = result.ok ? 0 : 1;
 }
 
 async function listMemories(): Promise<void> {
   const { ledger } = getClients();
-  console.log(JSON.stringify(await listRecordedMemoryObjects(ledger), null, 2));
+  printSuccess("list-memories", await listRecordedMemoryObjects(ledger));
 }
 
 async function exportMemory(memoryId?: string, outputPath?: string): Promise<void> {
@@ -158,7 +186,7 @@ async function exportMemory(memoryId?: string, outputPath?: string): Promise<voi
     await mkdir(dirname(resolved), { recursive: true });
     await writeFile(resolved, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
   }
-  console.log(JSON.stringify(bundle, null, 2));
+  printSuccess("export-memory", bundle);
 }
 
 async function importMemory(bundlePath: string): Promise<void> {
@@ -166,12 +194,12 @@ async function importMemory(bundlePath: string): Promise<void> {
   const raw = await readFile(resolve(bundlePath), "utf8");
   const entry = await importRecordedMemoryBundle(JSON.parse(raw), storage, ledger);
   await persistLastMemoryId(entry.memory_id);
-  console.log(JSON.stringify(entry, null, 2));
+  printSuccess("import-memory", entry);
 }
 
 async function listBindings(): Promise<void> {
   const { bindingLedger } = getClients();
-  console.log(JSON.stringify(await listRecordedBindingObjects(bindingLedger), null, 2));
+  printSuccess("list-bindings", await listRecordedBindingObjects(bindingLedger));
 }
 
 async function exportBinding(bindingId?: string, outputPath?: string): Promise<void> {
@@ -183,7 +211,7 @@ async function exportBinding(bindingId?: string, outputPath?: string): Promise<v
     await mkdir(dirname(resolved), { recursive: true });
     await writeFile(resolved, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
   }
-  console.log(JSON.stringify(bundle, null, 2));
+  printSuccess("export-binding", bundle);
 }
 
 async function importBinding(bundlePath: string): Promise<void> {
@@ -191,7 +219,7 @@ async function importBinding(bundlePath: string): Promise<void> {
   const raw = await readFile(resolve(bundlePath), "utf8");
   const entry = await importRecordedBindingBundle(JSON.parse(raw), storage, bindingLedger);
   await persistLastBindingId(entry.binding_id);
-  console.log(JSON.stringify(entry, null, 2));
+  printSuccess("import-binding", entry);
 }
 
 async function main(): Promise<void> {
@@ -254,6 +282,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(error);
+  printError(error);
   process.exitCode = 1;
 });

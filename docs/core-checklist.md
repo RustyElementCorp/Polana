@@ -21,6 +21,7 @@ This checklist tracks that state.
 
 - `done` memory object schema exists
 - `done` binding object schema exists
+- `done` attestation object schema exists
 - `done` canonicalization rules are documented
 - `done` address model is documented
 - `done` ID generation rules are documented
@@ -34,6 +35,7 @@ This checklist tracks that state.
 - `done` auto-generation of producer and owner IDs exists in TS create flow
 - `done` binding generation exists in TS and Rust
 - `done` attestation and anchor ID generation rules are documented and validated
+- `done` attestation object validation exists in TS and Rust
 
 ## 3. Memory Runtime
 
@@ -68,7 +70,7 @@ This checklist tracks that state.
 - `done` ingestion API exposes memory create/query/export/import
 - `done` ingestion API exposes binding create/query/export/import
 - `done` API error shape is normalized
-- `pending` CLI output shape is normalized with the same strictness as the API
+- `done` CLI output shape is normalized with the same strictness as the API
 
 ## 6. Cross-Implementation Confidence
 
@@ -76,7 +78,7 @@ This checklist tracks that state.
 - `done` Rust golden fixture tests exist
 - `done` TS and Rust share the same memory golden vectors
 - `done` TS and Rust share the same binding validation fixture
-- `pending` TS and Rust share portable import/export fixture bundles
+- `done` TS and Rust share portable import/export fixture bundles
 
 ## 7. Adapter Isolation
 
@@ -84,17 +86,23 @@ This checklist tracks that state.
 - `done` memory core works without Solana
 - `done` memory core works without Filecoin/Storacha
 - `done` chain adapters are structurally outside the core path
-- `pending` the repo boundary between `vanilla core` and adapter packages is fully formalized
+- `done` the repo boundary between `vanilla core` and adapter packages is formalized in manifests, scripts, and docs
 
 ## 8. Operational Gaps Still Open
 
 These are the main remaining items before the core can be called tightly closed:
 
-1. make CLI success/error output more uniform
-2. add shared import/export fixtures across TS and Rust
-3. optionally split the vanilla core into a cleaner standalone package boundary
+1. optionally split the vanilla core into its own repository or workspace later
 
-## 9. Current Status
+## 9. Explicit TODOs Beyond Core Closure
+
+These items are important, but they are no longer required for the core itself to be considered closed:
+
+1. add attestation ledger/query/export/import runtime surfaces
+2. strengthen the query/index model beyond current local field filtering
+3. build richer core-backed client flows on top of the closed core
+
+## 10. Current Status
 
 Current practical status:
 
@@ -103,11 +111,12 @@ Current practical status:
 - local runtime: strong
 - local interfaces: strong
 - versioning/migration policy: documented and enforced for bundle payloads
-- TS/Rust import-export parity: not finished
-- clean standalone packaging boundary: not finished
+- TS/Rust import-export parity: strong
+- clean standalone packaging boundary: strong
+- future repo extraction boundary: optional
 
 In short:
 
 - the local-first core is already usable
-- the remaining work is mostly hardening and packaging
-- the biggest unfinished items are shared bundle parity, CLI polish, and final boundary cleanup
+- the remaining work is mostly optional extraction and packaging choices
+- the current core boundary is explicit enough to stand on its own

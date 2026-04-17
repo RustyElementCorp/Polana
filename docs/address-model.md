@@ -211,6 +211,7 @@ The next core artifacts should be:
 - a machine-readable binding schema
 - generation rules for `prod_*`, `own_*`, and `bind_*`
 - verification rules for binding state transitions
+- a machine-readable attestation schema
 
 Those generation rules now live here:
 

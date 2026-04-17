@@ -12,6 +12,15 @@ Polana turns those outputs into durable memory objects:
 
 The core protocol remains a lightweight memory kernel. The current product direction is a dual-chain architecture built on top of that chain-agnostic core.
 
+The `vanilla core` boundary is now explicit:
+
+- TS core packages live under `packages/*`
+- the Rust authoritative core lives in `rust/polana-core`
+- local interfaces sit on top of that boundary
+- chain crates remain outside it as adapters
+
+See [Core Boundary](/Users/degikwag/code/llm/Polana/docs/core-boundary.md).
+
 ## 2. Product Thesis
 
 Polana should answer four questions for every AI artifact:

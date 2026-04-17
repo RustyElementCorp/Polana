@@ -9,3 +9,14 @@ members = [
   "rust/polana-relayer"
 ]
 resolver = "2"
+
+[workspace.metadata.polana]
+core_members = ["rust/polana-core"]
+adapter_members = [
+  "rust/pallet-memory-registry",
+  "rust/polana-node",
+  "rust/polana-runtime",
+  "rust/polana-submitter",
+  "rust/solana-memory-mirror",
+  "rust/polana-relayer"
+]

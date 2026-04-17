@@ -40,6 +40,26 @@ pub fn validate_producer_id(value: &str) -> Result<(), PolanaCoreError> {
     validate_core_id(value, "prod", "producer.producer_id")
 }
 
+pub fn validate_memory_id(value: &str) -> Result<(), PolanaCoreError> {
+    if !value.starts_with("mem_") {
+        return Err(PolanaCoreError::InvalidField("memory.memory_id"));
+    }
+
+    let body = &value["mem_".len()..];
+    if body.len() < 16 {
+        return Err(PolanaCoreError::InvalidField("memory.memory_id"));
+    }
+
+    if !body
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_' || ch == '-')
+    {
+        return Err(PolanaCoreError::InvalidField("memory.memory_id"));
+    }
+
+    Ok(())
+}
+
 pub fn validate_owner_id(value: &str) -> Result<(), PolanaCoreError> {
     validate_core_id(value, "own", "ownership.owner_id")
 }

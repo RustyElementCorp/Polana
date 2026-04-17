@@ -1,10 +1,13 @@
 import {
+  type AttestationObject,
   type BindingObject,
   type MemoryObject,
   type ContentDescriptor,
   MEMORY_SCHEMA_VERSION,
+  assertValidAttestationObject,
   assertValidBindingObject,
   assertValidMemoryObject,
+  generateAttestationId,
   generateBindingId,
   generateOwnerId,
   generateProducerId,
@@ -129,6 +132,19 @@ export interface CreateBindingInput extends Omit<BindingObject, "schema_version"
   binding_id?: string;
 }
 
+export interface CreateAttestationInput extends Omit<AttestationObject, "schema_version" | "attestation_id"> {
+  attestation_id?: string;
+}
+
+export interface StoredAttestationEntry {
+  attestation_id: string;
+  content_cid: string;
+  subject_id: string;
+  subject_type: AttestationObject["subject_type"];
+  status: AttestationObject["status"];
+  kind: AttestationObject["kind"];
+}
+
 export interface StoredBindingEntry {
   binding_id: string;
   content_cid: string;
@@ -169,6 +185,24 @@ export function createBindingObject(input: CreateBindingInput): BindingObject {
   return binding;
 }
 
+export function createAttestationObject(input: CreateAttestationInput): AttestationObject {
+  const attestation: AttestationObject = {
+    schema_version: MEMORY_SCHEMA_VERSION,
+    attestation_id: input.attestation_id ?? generateAttestationId(),
+    subject_id: input.subject_id,
+    subject_type: input.subject_type,
+    kind: input.kind,
+    issuer: input.issuer,
+    evidence: input.evidence,
+    status: input.status,
+    timestamps: input.timestamps,
+    notes: input.notes,
+  };
+
+  assertValidAttestationObject(attestation);
+  return attestation;
+}
+
 export async function createAndStoreBindingObject(
   input: CreateBindingInput,
   storage: StorageClient,
@@ -182,6 +216,23 @@ export async function createAndStoreBindingObject(
     subject_id: binding.subject_id,
     subject_type: binding.subject_type,
     verification_status: binding.verification.status,
+  };
+}
+
+export async function createAndStoreAttestationObject(
+  input: CreateAttestationInput,
+  storage: StorageClient,
+): Promise<StoredAttestationEntry> {
+  const attestation = createAttestationObject(input);
+  const raw = JSON.stringify(attestation, null, 2);
+  const stored = await storage.put(raw);
+  return {
+    attestation_id: attestation.attestation_id,
+    content_cid: stored.cid,
+    subject_id: attestation.subject_id,
+    subject_type: attestation.subject_type,
+    status: attestation.status,
+    kind: attestation.kind,
   };
 }
 

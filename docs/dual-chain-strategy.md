@@ -49,6 +49,10 @@ Current code:
 - [packages/hashing](/Users/degikwag/code/llm/Polana/packages/hashing)
 - [packages/signer](/Users/degikwag/code/llm/Polana/packages/signer)
 
+Repository status:
+
+- normative protocol surface
+
 ### 3.2 Chain A: Registry / Onboarding Chain
 
 This chain is optimized for getting the protocol onchain quickly and providing a credible anchor layer.
@@ -60,6 +64,10 @@ Current candidate:
 Current code:
 
 - [rust/pallet-memory-registry](/Users/degikwag/code/llm/Polana/rust/pallet-memory-registry)
+
+Repository status:
+
+- reference adapter
 
 Responsibilities:
 
@@ -87,6 +95,10 @@ Current code direction:
 
 - [rust/solana-memory-mirror](/Users/degikwag/code/llm/Polana/rust/solana-memory-mirror)
 
+Repository status:
+
+- reference adapter
+
 ## 4. Current Interpretation Of The Substrate Work
 
 The Substrate pallet is:
@@ -94,6 +106,7 @@ The Substrate pallet is:
 - an intentional first onchain adapter
 - a registry-oriented chain implementation
 - not the entire architectural commitment of Polana
+- a reference adapter kept in-repo to validate the core boundary
 
 It should be read as `Chain A`, not as the whole system.
 

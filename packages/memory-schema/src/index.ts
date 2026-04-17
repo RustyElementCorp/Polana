@@ -13,6 +13,23 @@ export type Retention = "permanent" | "archival" | "time_bound";
 export type SourceClock = "app" | "ledger" | "anchor";
 export type BindingSubjectType = "producer" | "owner" | "attestation" | "anchor";
 export type BindingVerificationStatus = "claimed" | "verified" | "revoked";
+export type AttestationSubjectType =
+  | "memory"
+  | "binding"
+  | "producer"
+  | "owner"
+  | "attestation"
+  | "anchor";
+export type AttestationIssuerType = "producer" | "owner";
+export type AttestationStatus = "issued" | "revoked";
+export type AttestationKind =
+  | "producer_signature"
+  | "human_review"
+  | "enterprise_approval"
+  | "execution_proof"
+  | "compliance_check"
+  | "binding_verification"
+  | "anchor_confirmation";
 
 export interface EncryptionDescriptor {
   enabled: boolean;
@@ -141,6 +158,38 @@ export interface BindingObject {
   notes?: string;
 }
 
+export interface AttestationIssuerDescriptor {
+  issuer_id: string;
+  issuer_type: AttestationIssuerType;
+  display_name?: string;
+  key_ref?: string;
+}
+
+export interface AttestationEvidenceDescriptor {
+  method: string;
+  value?: string;
+  ref?: string;
+  hash?: string;
+}
+
+export interface AttestationTimestamps {
+  issued_at: string;
+  revoked_at?: string;
+}
+
+export interface AttestationObject {
+  schema_version: "1.0.0";
+  attestation_id: string;
+  subject_id: string;
+  subject_type: AttestationSubjectType;
+  kind: AttestationKind;
+  issuer: AttestationIssuerDescriptor;
+  evidence: AttestationEvidenceDescriptor;
+  status: AttestationStatus;
+  timestamps: AttestationTimestamps;
+  notes?: string;
+}
+
 export interface MemoryObject {
   schema_version: "1.0.0";
   memory_id: string;
@@ -210,6 +259,10 @@ export function isProducerId(value: string): boolean {
   return PRODUCER_ID_PATTERN.test(value);
 }
 
+export function isMemoryId(value: string): boolean {
+  return MEMORY_ID_PATTERN.test(value);
+}
+
 export function isOwnerId(value: string): boolean {
   return OWNER_ID_PATTERN.test(value);
 }
@@ -230,6 +283,10 @@ export function validateProducerId(value: string): void {
   assert(isProducerId(value), "producer_id must match ^prod_[a-z0-9]{20,64}$");
 }
 
+export function validateMemoryId(value: string): void {
+  assert(isMemoryId(value), "memory_id must match ^mem_[a-z0-9_-]{16,}$");
+}
+
 export function validateOwnerId(value: string): void {
   assert(isOwnerId(value), "owner_id must match ^own_[a-z0-9]{20,64}$");
 }
@@ -246,14 +303,25 @@ export function validateAnchorId(value: string): void {
   assert(isAnchorId(value), "anchor_id must match ^anch_[a-z0-9]{20,64}$");
 }
 
-function validateBindingSubjectId(value: string): void {
-  assert(
-    isProducerId(value)
-      || isOwnerId(value)
-      || isAttestationId(value)
-      || isAnchorId(value),
-    "binding.subject_id must match ^(prod|own|att|anch)_[a-z0-9]{20,64}$",
-  );
+function validateBindingSubjectId(subjectType: BindingSubjectType, value: string): void {
+  if (subjectType === "producer") {
+    validateProducerId(value);
+    return;
+  }
+  if (subjectType === "owner") {
+    validateOwnerId(value);
+    return;
+  }
+  if (subjectType === "attestation") {
+    validateAttestationId(value);
+    return;
+  }
+  if (subjectType === "anchor") {
+    validateAnchorId(value);
+    return;
+  }
+
+  assert(false, "binding.subject_type is invalid");
 }
 
 export function createCoreIdFromBytes(
@@ -292,11 +360,11 @@ export function assertValidBindingObject(value: unknown): asserts value is Bindi
   assert(typeof value.binding_id === "string", "binding.binding_id is required");
   validateBindingId(value.binding_id);
   assert(typeof value.subject_id === "string", "binding.subject_id is required");
-  validateBindingSubjectId(value.subject_id);
   assert(
     ["producer", "owner", "attestation", "anchor"].includes(String(value.subject_type)),
     "binding.subject_type is invalid",
   );
+  validateBindingSubjectId(value.subject_type as BindingSubjectType, value.subject_id);
 
   assert(isRecord(value.external_ref), "binding.external_ref is required");
   assert(
@@ -369,6 +437,154 @@ export function assertValidBindingTransition(
   );
 }
 
+function validateAttestationSubjectId(
+  subjectType: AttestationSubjectType,
+  subjectId: string,
+): void {
+  if (subjectType === "memory") {
+    validateMemoryId(subjectId);
+    return;
+  }
+
+  if (subjectType === "binding") {
+    validateBindingId(subjectId);
+    return;
+  }
+
+  if (subjectType === "producer") {
+    validateProducerId(subjectId);
+    return;
+  }
+
+  if (subjectType === "owner") {
+    validateOwnerId(subjectId);
+    return;
+  }
+
+  if (subjectType === "attestation") {
+    validateAttestationId(subjectId);
+    return;
+  }
+
+  if (subjectType === "anchor") {
+    validateAnchorId(subjectId);
+    return;
+  }
+
+  assert(false, "attestation.subject_type is invalid");
+}
+
+function validateAttestationIssuerId(
+  issuerType: AttestationIssuerType,
+  issuerId: string,
+): void {
+  if (issuerType === "producer") {
+    validateProducerId(issuerId);
+    return;
+  }
+
+  if (issuerType === "owner") {
+    validateOwnerId(issuerId);
+    return;
+  }
+
+  assert(false, "attestation.issuer.issuer_type is invalid");
+}
+
+export function assertValidAttestationObject(value: unknown): asserts value is AttestationObject {
+  assert(isRecord(value), "attestation object must be an object");
+  assert(
+    value.schema_version === MEMORY_SCHEMA_VERSION,
+    "attestation.schema_version must be 1.0.0",
+  );
+  assert(typeof value.attestation_id === "string", "attestation.attestation_id is required");
+  validateAttestationId(value.attestation_id);
+  assert(typeof value.subject_id === "string", "attestation.subject_id is required");
+  assert(
+    ["memory", "binding", "producer", "owner", "attestation", "anchor"].includes(
+      String(value.subject_type),
+    ),
+    "attestation.subject_type is invalid",
+  );
+  validateAttestationSubjectId(
+    value.subject_type as AttestationSubjectType,
+    value.subject_id,
+  );
+  assert(
+    [
+      "producer_signature",
+      "human_review",
+      "enterprise_approval",
+      "execution_proof",
+      "compliance_check",
+      "binding_verification",
+      "anchor_confirmation",
+    ].includes(String(value.kind)),
+    "attestation.kind is invalid",
+  );
+
+  assert(isRecord(value.issuer), "attestation.issuer is required");
+  assert(typeof value.issuer.issuer_id === "string", "attestation.issuer.issuer_id is required");
+  assert(
+    ["producer", "owner"].includes(String(value.issuer.issuer_type)),
+    "attestation.issuer.issuer_type is invalid",
+  );
+  validateAttestationIssuerId(
+    value.issuer.issuer_type as AttestationIssuerType,
+    value.issuer.issuer_id,
+  );
+
+  assert(isRecord(value.evidence), "attestation.evidence is required");
+  assert(
+    typeof value.evidence.method === "string" && value.evidence.method.trim().length > 0,
+    "attestation.evidence.method is required",
+  );
+  assertHash("attestation.evidence.hash", value.evidence.hash);
+
+  assert(
+    ["issued", "revoked"].includes(String(value.status)),
+    "attestation.status is invalid",
+  );
+
+  assert(isRecord(value.timestamps), "attestation.timestamps is required");
+  assertTimestamp("attestation.timestamps.issued_at", value.timestamps.issued_at, true);
+  assertTimestamp("attestation.timestamps.revoked_at", value.timestamps.revoked_at);
+  assertValidAttestationLifecycle(value as unknown as AttestationObject);
+}
+
+export function assertValidAttestationLifecycle(attestation: AttestationObject): void {
+  if (attestation.status === "issued") {
+    assert(
+      attestation.timestamps.revoked_at === undefined,
+      "issued attestation must not include timestamps.revoked_at",
+    );
+    return;
+  }
+
+  if (attestation.status === "revoked") {
+    assert(
+      attestation.timestamps.revoked_at !== undefined,
+      "revoked attestation must include timestamps.revoked_at",
+    );
+  }
+}
+
+export function assertValidAttestationTransition(
+  previousStatus: AttestationStatus,
+  nextAttestation: AttestationObject,
+): void {
+  assertValidAttestationObject(nextAttestation);
+  const nextStatus = nextAttestation.status;
+  const allowed =
+    previousStatus === nextStatus
+    || (previousStatus === "issued" && nextStatus === "revoked");
+
+  assert(
+    allowed,
+    `attestation transition ${previousStatus} -> ${nextStatus} is invalid`,
+  );
+}
+
 function assertHash(name: string, value: unknown, required = false): void {
   if (value === undefined) {
     assert(!required, `${name} is required`);
@@ -388,7 +604,8 @@ function assertTimestamp(name: string, value: unknown, required = false): void {
 export function assertValidMemoryObject(value: unknown): asserts value is MemoryObject {
   assert(isRecord(value), "memory object must be an object");
   assert(value.schema_version === MEMORY_SCHEMA_VERSION, "schema_version must be 1.0.0");
-  assert(typeof value.memory_id === "string" && MEMORY_ID_PATTERN.test(value.memory_id), "memory_id format is invalid");
+  assert(typeof value.memory_id === "string", "memory_id is required");
+  validateMemoryId(value.memory_id);
 
   assert(isRecord(value.content), "content is required");
   assert(typeof value.content.cid === "string" && value.content.cid.length >= 16, "content.cid is invalid");
