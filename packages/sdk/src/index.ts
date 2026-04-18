@@ -19,6 +19,9 @@ import {
   toCanonicalHashInput,
 } from "@polana/hashing";
 import type {
+  AttestationLedgerClient,
+  AttestationLedgerEntry,
+  AttestationLedgerRecord,
   BindingLedgerClient,
   BindingLedgerEntry,
   BindingLedgerRecord,
@@ -145,6 +148,15 @@ export interface StoredAttestationEntry {
   kind: AttestationObject["kind"];
 }
 
+export interface AttestationQuery {
+  attestation_id?: string;
+  subject_id?: string;
+  subject_type?: AttestationObject["subject_type"];
+  status?: AttestationObject["status"];
+  kind?: AttestationObject["kind"];
+  issuer_id?: string;
+}
+
 export interface StoredBindingEntry {
   binding_id: string;
   content_cid: string;
@@ -167,6 +179,12 @@ export interface ExportedBindingBundle {
   bundle_version: typeof POLANA_BUNDLE_VERSION;
   record: BindingLedgerRecord;
   binding_body: string;
+}
+
+export interface ExportedAttestationBundle {
+  bundle_version: typeof POLANA_BUNDLE_VERSION;
+  record: AttestationLedgerRecord;
+  attestation_body: string;
 }
 
 export function createBindingObject(input: CreateBindingInput): BindingObject {
@@ -256,6 +274,30 @@ export async function createAndRecordBindingObject(
   };
 
   await ledger.append({ entry, binding });
+  return entry;
+}
+
+export async function createAndRecordAttestationObject(
+  input: CreateAttestationInput,
+  storage: StorageClient,
+  ledger: AttestationLedgerClient,
+): Promise<AttestationLedgerEntry> {
+  const attestation = createAttestationObject(input);
+  const raw = JSON.stringify(attestation, null, 2);
+  const stored = await storage.put(raw);
+  const recordedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+
+  const entry: AttestationLedgerEntry = {
+    attestation_id: attestation.attestation_id,
+    content_cid: stored.cid,
+    recorded_at: recordedAt,
+    subject_id: attestation.subject_id,
+    subject_type: attestation.subject_type,
+    status: attestation.status,
+    kind: attestation.kind,
+  };
+
+  await ledger.append({ entry, attestation });
   return entry;
 }
 
@@ -469,6 +511,13 @@ export async function getRecordedBindingObject(
   return ledger.get(bindingId);
 }
 
+export async function getRecordedAttestationObject(
+  attestationId: string,
+  ledger: AttestationLedgerClient,
+): Promise<AttestationLedgerRecord | null> {
+  return ledger.get(attestationId);
+}
+
 export async function listRecordedBindingObjects(
   ledger: BindingLedgerClient,
   query: BindingQuery = {},
@@ -500,6 +549,34 @@ export async function listRecordedBindingObjects(
   });
 }
 
+export async function listRecordedAttestationObjects(
+  ledger: AttestationLedgerClient,
+  query: AttestationQuery = {},
+): Promise<AttestationLedgerRecord[]> {
+  const records = await ledger.list();
+  return records.filter((record) => {
+    if (query.attestation_id && record.entry.attestation_id !== query.attestation_id) {
+      return false;
+    }
+    if (query.subject_id && record.attestation.subject_id !== query.subject_id) {
+      return false;
+    }
+    if (query.subject_type && record.attestation.subject_type !== query.subject_type) {
+      return false;
+    }
+    if (query.status && record.attestation.status !== query.status) {
+      return false;
+    }
+    if (query.kind && record.attestation.kind !== query.kind) {
+      return false;
+    }
+    if (query.issuer_id && record.attestation.issuer.issuer_id !== query.issuer_id) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export async function exportRecordedBindingObject(
   bindingId: string,
   storage: StorageClient,
@@ -518,6 +595,27 @@ export async function exportRecordedBindingObject(
     bundle_version: POLANA_BUNDLE_VERSION,
     record,
     binding_body: new TextDecoder().decode(bytes),
+  };
+}
+
+export async function exportRecordedAttestationObject(
+  attestationId: string,
+  storage: StorageClient,
+  ledger: AttestationLedgerClient,
+): Promise<ExportedAttestationBundle> {
+  const record = await ledger.get(attestationId);
+  if (!record) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.LEDGER_RECORD_NOT_FOUND,
+      "attestation ledger record not found",
+    );
+  }
+
+  const bytes = await storage.get(record.entry.content_cid);
+  return {
+    bundle_version: POLANA_BUNDLE_VERSION,
+    record,
+    attestation_body: new TextDecoder().decode(bytes),
   };
 }
 
@@ -545,6 +643,38 @@ export async function importRecordedBindingBundle(
   }
 
   const existing = await ledger.get(bundle.record.entry.binding_id);
+  if (existing) {
+    return existing.entry;
+  }
+
+  await ledger.append(bundle.record);
+  return bundle.record.entry;
+}
+
+export async function importRecordedAttestationBundle(
+  bundle: ExportedAttestationBundle,
+  storage: StorageClient,
+  ledger: AttestationLedgerClient,
+): Promise<AttestationLedgerEntry> {
+  if (bundle.bundle_version !== POLANA_BUNDLE_VERSION) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.INVALID_INPUT,
+      "unsupported attestation bundle version",
+      { expected: POLANA_BUNDLE_VERSION, actual: bundle.bundle_version },
+    );
+  }
+
+  assertValidAttestationObject(bundle.record.attestation);
+
+  const stored = await storage.put(bundle.attestation_body);
+  if (stored.cid !== bundle.record.entry.content_cid) {
+    throw new PolanaError(
+      POLANA_ERROR_CODES.CONTENT_CID_MISMATCH,
+      "imported attestation content cid does not match attestation ledger cid",
+    );
+  }
+
+  const existing = await ledger.get(bundle.record.entry.attestation_id);
   if (existing) {
     return existing.entry;
   }

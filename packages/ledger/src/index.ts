@@ -1,6 +1,6 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { BindingObject, MemoryObject } from "@polana/memory-schema";
+import type { AttestationObject, BindingObject, MemoryObject } from "@polana/memory-schema";
 
 export interface LedgerEntry {
   memory_id: string;
@@ -40,6 +40,27 @@ export interface BindingLedgerClient {
   append(record: BindingLedgerRecord): Promise<BindingLedgerEntry>;
   get(bindingId: string): Promise<BindingLedgerRecord | null>;
   list(): Promise<BindingLedgerRecord[]>;
+}
+
+export interface AttestationLedgerEntry {
+  attestation_id: string;
+  content_cid: string;
+  recorded_at: string;
+  subject_id: string;
+  subject_type: AttestationObject["subject_type"];
+  status: AttestationObject["status"];
+  kind: AttestationObject["kind"];
+}
+
+export interface AttestationLedgerRecord {
+  entry: AttestationLedgerEntry;
+  attestation: AttestationObject;
+}
+
+export interface AttestationLedgerClient {
+  append(record: AttestationLedgerRecord): Promise<AttestationLedgerEntry>;
+  get(attestationId: string): Promise<AttestationLedgerRecord | null>;
+  list(): Promise<AttestationLedgerRecord[]>;
 }
 
 export class JsonlLedgerClient implements LedgerClient {
@@ -92,6 +113,34 @@ export class JsonlBindingLedgerClient implements BindingLedgerClient {
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line) => JSON.parse(line) as BindingLedgerRecord);
+    } catch {
+      return [];
+    }
+  }
+}
+
+export class JsonlAttestationLedgerClient implements AttestationLedgerClient {
+  constructor(private readonly ledgerPath: string) {}
+
+  async append(record: AttestationLedgerRecord): Promise<AttestationLedgerEntry> {
+    await mkdir(dirname(this.ledgerPath), { recursive: true });
+    await appendFile(this.ledgerPath, `${JSON.stringify(record)}\n`, "utf8");
+    return record.entry;
+  }
+
+  async get(attestationId: string): Promise<AttestationLedgerRecord | null> {
+    const records = await this.list();
+    return records.find((record) => record.entry.attestation_id === attestationId) ?? null;
+  }
+
+  async list(): Promise<AttestationLedgerRecord[]> {
+    try {
+      const data = await readFile(this.ledgerPath, "utf8");
+      return data
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as AttestationLedgerRecord);
     } catch {
       return [];
     }

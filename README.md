@@ -177,8 +177,20 @@ The core-backed client adds a user-facing flow on top of that:
 - record a memory object
 - optionally create an owner binding
 - verify immediately
+- load representative scenario presets so the client can demo public memory, identity claim, and private handoff flows without manual setup
+- see a structured flow result summary as soon as a memory is recorded or imported
+- inspect portable memory or binding bundles through a summary-first export panel before reading raw JSON
+- inspect a memory in a detail drawer with sectioned summaries for content, provenance, and verification
+- inspect a binding in its own detail drawer with structured binding and verification summaries, then jump back to related memories
+- see clearer loading, empty, and error states in timeline and drawer views
+- issue real local attestations from memory and binding drawers, and inspect recorded attestation summaries in place
+- inspect a stronger local index with recent attestations and high-level memory/binding/attestation coverage counts
 - export the latest memory bundle
+- export or copy a bundle directly from the detail drawer
+- export or copy a binding bundle directly from the binding drawer
 - paste and re-import a portable bundle
+- keep filter and panel state across refreshes in the browser
+- keep filter and selected drawer state in the URL for revisit and sharing
 - inspect the recent local timeline in the browser
 
 CLI responses now use the same top-level envelope style as the API:
